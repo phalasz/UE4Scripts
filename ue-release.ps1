@@ -18,15 +18,16 @@ param (
 . $PSScriptRoot\inc\platform.ps1
 . $PSScriptRoot\inc\packageconfig.ps1
 . $PSScriptRoot\inc\projectversion.ps1
+. $PSScriptRoot\inc\uproject.ps1
 . $PSScriptRoot\inc\filetools.ps1
 . $PSScriptRoot\inc\steam.ps1
 . $PSScriptRoot\inc\itch.ps1
 
 
 function Write-Usage {
-    Write-Output "Steve's UE4 release tool"
+    Write-Output "Steve's Unreal release tool"
     Write-Output "Usage:"
-    Write-Output "  ue4-release.ps1 [-version:ver|-latest] -variant:var -services:steam,itch [-src:sourcefolder] [-dryrun]"
+    Write-Output "  ue-release.ps1 [-version:ver|-latest] -variant:var -services:steam,itch [-src:sourcefolder] [-dryrun]"
     Write-Output " "
     Write-Output "  -version:ver        : Version to release; must have been packaged already"
     Write-Output "  -latest             : Instead of an explicit version, release one identified in project settings"
@@ -64,12 +65,15 @@ if ($version -and $latest) {
     Exit 1
 }
 
-Write-Output "~-~-~ UE4 Release Helper Start ~-~-~"
+Write-Output "~-~-~ Unreal Release Helper Start ~-~-~"
 
 try {
 
     # Import config
     $config = Read-Package-Config -srcfolder:$src
+    $projfile = Get-Uproject-Filename -srcfolder:$src -config:$config
+    $proj = Read-Uproject $projfile
+    $ueVersion = Get-UE-Version $proj
 
     if ($latest) {
         $version = Get-Project-Version $src
@@ -90,7 +94,7 @@ try {
     foreach ($variantConfig in $variantConfigs) {
 
         # Get source dir
-        $sourcedir = Get-Package-Client-Dir -config:$config -versionNumber:$version -variantName:$variantConfig.Name
+        $sourcedir = Get-Package-Client-Dir -config:$config -versionNumber:$version -variantName:$variantConfig.Name -ueVersion:$ueVersion
 
         if (-not (Test-Path $sourcedir -PathType Container)) {
             Write-Error "Release folder $sourcedir does not exist, skipping"
@@ -141,9 +145,9 @@ try {
 
 } catch {
     Write-Output $_.Exception.Message
-    Write-Output "~-~-~ UE4 Release Helper FAILED ~-~-~"
+    Write-Output "~-~-~ Unreal Release Helper FAILED ~-~-~"
     Exit 9
 }
 
 
-Write-Output "~-~-~ UE4 Release Helper Completed OK ~-~-~"
+Write-Output "~-~-~ Unreal Release Helper Completed OK ~-~-~"
